@@ -146,16 +146,17 @@
    (concat "
 function eterm_set_variables {
     local emacs_host=\"" (car (split-string (system-name) "\\.")) "\"
+    local tramp_hostname=${TRAMP_HOSTNAME-$(hostname)}
     if [[ $TERM == \"eterm-color\" ]]; then
-        if [[ ${HOSTNAME-$(hostname)} != \"$emacs_host\" ]]; then
+        if [[ $tramp_hostname != \"$emacs_host\" ]]; then
             echo -e \"\\033AnSiTu\" ${TRAMP_USERNAME-$(whoami)}
-            echo -e \"\\033AnSiTh\" ${TRAMP_HOSTNAME-$(hostname)}
+            echo -e \"\\033AnSiTh\" $tramp_hostname
         fi
         echo -e \"\\033AnSiTc\" $(pwd)
     elif [[ $TERM == \"screen\" || $TERM  == \"screen-256color\" ]]; then
-        if [[ ${HOSTNAME-$(hostname)} != \"$emacs_host\" ]]; then
+        if [[ $tramp_hostname != \"$emacs_host\" ]]; then
             echo -e \"\\033P\\033AnSiTu\\033\\\\\" ${TRAMP_USERNAME-$(whoami)}
-            echo -e \"\\033P\\033AnSiTh\\033\\\\\" ${TRAMP_HOSTNAME-$(hostname)}
+            echo -e \"\\033P\\033AnSiTh\\033\\\\\" $tramp_hostname
         fi
         echo -e \"\\033P\\033AnSiTc\\033\\\\\" $(pwd)
     fi
