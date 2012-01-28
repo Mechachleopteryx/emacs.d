@@ -236,41 +236,53 @@
 ;;               (looking-at-p "\\["))))))
 
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun dss/init-clojure ()
-  (interactive)
-  ;; (dss/init-elpa)
-  (clojure-slime-config))
-
 (defun dss/clojure-ignore-form ()
+  "Inserts, toggles, or moves Clojure's #_ ignore-next-form reader macro."
   (interactive)
-  (skip-chars-forward " ")
-  (while (dss/in-string-p)
-    (backward-char))
-  (cond
-   ((and (or (looking-at-p ";") (dss/in-comment-p))
-         (looking-at-p "[ ;]*\("))
-    (progn
-      (back-to-indentation)
-      (mark-sexp)
-      (paredit-comment-dwim)
-      (insert "#_")))
-   ((and (equal last-command this-command)
-         (> (syntax-ppss-depth (syntax-ppss)) 0)
-         (looking-back "#_ *" (- (point) 5)))
-    (progn
-      (replace-match "")
-      (dss/out-one-sexp)
-      (insert "#_")))
-   ((looking-at-p "#_")
-    (delete-char 2))
-   ((save-excursion
-      (while (and (> (syntax-ppss-depth (syntax-ppss)) 0)
-                  (not (looking-back "#_ *" (- (point) 10))))
-        (dss/out-one-sexp))
-      (looking-back "#_ *" (- (point) 10)))
-    (save-excursion (replace-match "")))
-   (t (insert "#_"))))
+  (flet ((in-string-p () (eq 'string (syntax-ppss-context (syntax-ppss))))
+         (in-comment-p () (eq 'comment (syntax-ppss-context (syntax-ppss)))))
+    (skip-chars-forward " ")
+    (while (in-string-p)
+      (backward-char))
+    (cond
+     ;; switch from a comment to an ignore form, if paredit is enabled
+     ;; This bit might not work if mark-sexp fails inside the comment.
+     ((and (featurep 'paredit)
+           (or (looking-at-p ";") (in-comment-p))
+           (looking-at-p "[ ;]*\("))
+      (progn
+        (back-to-indentation)
+        (mark-sexp)
+        (paredit-comment-dwim)
+        (insert "#_")))
+
+     ;; if the command is repeated, move the ignore macro up a syntax level
+     ((and (equal last-command this-command)
+           (> (syntax-ppss-depth (syntax-ppss)) 0)
+           (looking-back "#_ *" (- (point) 5)))
+      (progn
+        (replace-match "")
+        (backward-up-list)
+        (insert "#_")))
+
+     ;; if the cursor is right on top of the ignore macro, remove it
+     ((looking-at-p "#_")
+      (delete-char 2))
+     ;; ditto, if in the middle of it
+     ((and (looking-at-p "_")
+           (looking-back "#"))
+      (progn (backward-char)
+             (delete-char 2)))
+
+     ;; if an outer form is already ignored, un-ignore (sic) it
+     ((save-excursion
+        (while (and (> (syntax-ppss-depth (syntax-ppss)) 0)
+                    (not (looking-back "#_ *" (- (point) 10))))
+          (backward-up-list))
+        (looking-back "#_ *" (- (point) 10)))
+      (save-excursion (replace-match "")))
+     ;; else, just ignore this form
+     (t (insert "#_")))))
 
 (defun dss/slime-repl-after-pmark-p ()
   (>= (point) slime-repl-input-start-mark))
@@ -333,6 +345,9 @@
   (interactive)
   (define-key clojure-mode-map (kbd "M-'") 'dss/clojure-ignore-form)
   (define-key clojure-mode-map (kbd "C-M-w") 'dss/indent-sexp)
+  ;; (mapc (lambda (k)
+  ;;         (define-key clojure-mode-map k 'dss/clojure-load-current-file))
+  ;;       (list (kbd "C-x C-s") [(f12)]))
   (dss/install-whitespace-cleanup-hook)
   (turn-on-auto-fill)
   (dss/load-lineker-mode)
@@ -346,65 +361,17 @@
 (put-clojure-indent 'match 1)
 (put-clojure-indent 'match/match 1)
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defvar dss-clojure-swank-command "lein-int swank %s localhost :colors? true")
-
+(setq clojure-test-ns-segment-position 1)
+(setq clojure-swank-command "~/bin/lein-int jack-in %s")
 (defun dss/clojure-jack-in ()
   (interactive)
-  (setq slime-net-coding-system 'utf-8-unix)
-  (lexical-let ((port (- 65535 (mod (caddr (current-time)) 4096)))
-                (dir default-directory))
-    (when (and (functionp 'slime-disconnect) (slime-current-connection))
-      (slime-disconnect))
-    (when (get-buffer "*swank*")
-      (let ((process (get-buffer-process (current-buffer))))
-        (if process
-            (set-process-query-on-exit-flag process nil))
-        (kill-buffer "*swank*")))
-    (let* ((swank-cmd (format dss-clojure-swank-command port))
-           (proc (start-process-shell-command "swank" "*swank*" swank-cmd)))
-      (set-process-sentinel (get-buffer-process "*swank*")
-                            'clojure-jack-in-sentinel)
-      (set-process-filter (get-buffer-process "*swank*")
-                          (lambda (process output)
-                            (with-current-buffer (process-buffer process)
-                              (insert output))
-                            (when (string-match
-                                   "Connection opened on localhost port" output)
-                              (message "Connecting to swank server...")
-                              ;; (clojure-eval-bootstrap-region process)
-                              (with-current-buffer
-                                  (or
-                                   (get-buffer "*slime-repl clojure*")
-                                   (get-buffer "*slime-repl nil*")
-                                   (current-buffer))
-                                (slime-connect "localhost" port)
-                                (when (string-match "slime-repl" (buffer-name))
-                                  (goto-char (point-max))))
-
-                              ;; (with-current-buffer (slime-output-buffer t)
-                              ;;   (setq default-directory dir))
-                              (set-process-sentinel process nil)
-                              (set-process-filter process nil)
-                              (set-process-query-on-exit-flag process nil))))))
-  (message "Starting swank server..."))
+  (clojure-jack-in))
 
 (setq slime-auto-connect 'always)
 (defun slime (&optional command coding-system)
   "Start a lein swank server and connect to it."
   (interactive)
-  (dss/clojure-jack-in))
-
-;; (defun slime-auto-connect ()
-;;   (cond ((or (eq slime-auto-connect 'always)
-;;              (and (eq slime-auto-connect 'ask)
-;;                   (y-or-n-p "No connection.  Start Slime? ")))
-;;          (save-window-excursion
-;;            (dss/clojure-jack-in)
-;;            (while (not (slime-current-connection))
-;;              (sleep-for 1))
-;;            (slime-connection)))
-;;         (t nil)))
+  (clojure-jack-in))
 
 (defun dss/clojure-repl-switch-to-current-ns ()
   (interactive)
@@ -483,14 +450,15 @@ is defined in your current Emacs buffer.
   (save-window-excursion
     (if (not (dss/clojure-in-tests))
         (clojure-jump-to-test))
-    (clojure-test-run-tests))
+    (clojure-test-run-tests)))
 
-  ;; (run-with-timer 3 nil (lambda () (clojure-test-clear)))
-  )
 (defun dss/clojure-load-current-file ()
   (interactive)
   (save-buffer)
-  (slime-compile-and-load-file))
+  (if (not (string-match-p
+            "project\\.clj"
+            (buffer-file-name)))
+      (slime-compile-and-load-file)))
 
 (defun dss/clojure-init-debugger ()
   (interactive)
@@ -592,9 +560,6 @@ is defined in your current Emacs buffer.
   (set (make-local-variable 'comment-start-skip)
        "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\)\\(;+\\|#|\\) *")
   (dss/clojure-add-extra-fontlock)
-
-
-  (cljdoc-localize-documentation-function)
   (eldoc-mode 1))
 (add-hook 'slime-repl-mode-hook 'dss/slime-repl-hook)
 
