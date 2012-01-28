@@ -371,7 +371,8 @@
 (defun dss/paredit-p-or-progn ()
   (interactive)
   (if (and (not (dss/in-string-p))
-           (looking-at-p "\("))
+           (looking-at-p "\(")
+           (looking-back " "))
       (progn
         (if (not mark-active)
             (mark-sexp))
