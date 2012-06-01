@@ -362,7 +362,7 @@
 (put-clojure-indent 'match/match 1)
 ;;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (setq clojure-test-ns-segment-position 1)
-(setq clojure-swank-command "~/bin/lein-int jack-in %s")
+(setq clojure-swank-command "~/bin/lein jack-in %s")
 (defun dss/clojure-jack-in ()
   (interactive)
   (clojure-jack-in))
