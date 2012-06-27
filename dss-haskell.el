@@ -39,6 +39,9 @@
    (region-beginning) (region-end)
    "\\(\\s-*\\) = " 1 0 nil))
 
+(require 'auto-complete-etags)
+(require 'auto-complete-extension)
+
 (defun dss/haskell-init-ac ()
   (interactive)
   (setq ac-sources
@@ -55,9 +58,11 @@
 
 (defun dss/haskell-mode-hook ()
   (interactive)
+  (ghc-init)
   (scion-mode 1)
   (scion-flycheck-on-save 1)
   (linum-mode 1)
+  (auto-complete-mode 1)
   (require 'inf-haskell)
 
   (define-key haskell-mode-map (kbd "M-.") 'dss/haskell-goto-definition)
@@ -66,7 +71,6 @@
   (dss/map-define-key inferior-haskell-mode-map '("\"" "`" "(" "[" "{") 'dss/haskell-electric-pair)
   (define-key haskell-mode-map (kbd "C-c =") 'dss/haskell-align-equals)
   (define-key haskell-mode-map (kbd "M-=") 'haskell-indent-align-guards-and-rhs)
-  (ghc-init)
   (flymake-mode)
   (dss/install-whitespace-cleanup-hook)
   (dss/load-lineker-mode)
