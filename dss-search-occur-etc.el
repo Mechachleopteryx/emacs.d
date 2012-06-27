@@ -80,5 +80,8 @@
    (get-buffers-matching-mode major-mode)
       (car (occur-read-primary-args))))
 
+(require 'inline-string-rectangle)
+(require 'mark-more-like-this)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (provide 'dss-search-occur-etc)
