@@ -102,7 +102,9 @@
      (org-column ((t (:background "#303030"))))
      (org-column-title ((t (:background "#00005f" :underline t :weight bold))))
      (org-table ((t (:foreground "#005fff"))))
-
+     (org-special-keyword ((t (:foreground "#999999"))))
+     (org-ellipsis ((t (:foreground "#777777"))))
+     (org-property-value ((t (:foreground "#bbbbbb"))))
      (org-meta-line ((t (:foreground "#767676"))))
      (org-upcoming-deadline ((t (:foreground "bright red"))))
 
@@ -148,11 +150,19 @@
      (ediff-fine-diff-A ((t (:background "#5f005f"))))
      (ediff-fine-diff-B ((t (:background "#0000d7"))))
      (ediff-fine-diff-C ((t (:background "#0000d7"))))
+
      (magit-item-highlight ((t (:background "#161616"))))
      (magit-diff-add ((t (:foreground "green"))))
      (magit-diff-del ((t (:foreground "red"))))
      (magit-diff-file-header ((t (:foreground "#0087af" :background "#121212"))))
      (magit-diff-hunk-header ((t (:foreground "#0087ff" :background "#121212"))))
+
+     (monky-diff-add ((t (:foreground "green"))))
+     (monky-diff-del ((t (:foreground "red"))))
+     (monky-log-head-label-bookmarks ((t (:foreground "red"
+                                                      :background "grey"))))
+     (monky-diff-hunk-header ((t (:foreground "#0087af" :background "#121212"))))
+
      (egg-text-base ((t (:foreground "#005faf"))))
      (egg-help-header-2 ((t (:foreground "grey"))))
      (egg-diff-file-header ((t (:foreground "#0087af" :background "#121212"))))
