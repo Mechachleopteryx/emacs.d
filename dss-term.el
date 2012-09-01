@@ -18,31 +18,39 @@
 (setq multi-term-program-switches "-l")
 (setq multi-term-switch-after-close nil)
 
+;;; screen -ls | perl -ne '/\.emacs\.([^\s]+)/ && print $1'
 (defun dss/cd-multi-term (dir &optional command switch buffer-name)
-  (let (tmp-buffer term-buffer)
-    ;; with-temp-buffer gets in the way here
-    (set-buffer (setq tmp-buffer (get-buffer-create "*multi-term-launcher*")))
-
-    (setq default-directory dir)
-
-    ;;(setq term-buffer (multi-term))
-    (setq term-buffer (multi-term-get-buffer current-prefix-arg))
+  (let* (term-buffer
+         (default-directory dir)
+         (index 1)
+         (term-name (format "term-local<%s>" index))
+         (term-command "eterm-local"))
+    (if buffer-name
+        (setq term-name buffer-name)
+      (progn
+        (while (buffer-live-p (get-buffer (format "*%s*" term-name)))
+          (setq index (1+ index))
+          (setq term-name (format "term-local<%s>" index)))))
+    (setq term-buffer
+          (make-term term-name term-command nil (concat "emacs." term-name)))
     (set-buffer term-buffer)
     (multi-term-internal)
-
-    (kill-buffer tmp-buffer)
     (if buffer-name
         (rename-buffer buffer-name))
-
-    (if command
-        (term-send-raw-string command))
+    (save-window-excursion
+      (switch-to-buffer term-buffer)
+      (sleep-for 0.6)
+      (when (< (1+ (count-lines 1 (point))) 15)
+        (term-send-raw-string "source ~/_bin/setup-tramp\n")
+        (when command
+          (term-send-raw-string command))))
     (unless (and (not (eq switch nil))
                  (< switch 0))
       (switch-to-buffer term-buffer))
     term-buffer))
 
-(defun dss/remote-term (host &optional command term-command)
-  (interactive)
+(defun dss/remote-term (host &optional command term-command before-tramp-callback)
+  (interactive "sWhere: ")
   (let* (term-buffer
          (index 1)
          (term-command (or term-command "eterm-ssh"))
@@ -50,15 +58,19 @@
     (while (buffer-live-p
             (get-buffer (format "*%s<%s>*" host index)))
       (setq index (1+ index)))
+
     (setq term-name (format "%s<%s>" host index))
     (setq term-buffer
           (make-term term-name term-command nil term-name host))
     (set-buffer term-buffer)
+
     ;; Internal handle for `multi-term' buffer.
     (multi-term-internal)
     ;; Switch buffer
     (switch-to-buffer term-buffer)
     (sleep-for 1)
+    (if before-tramp-callback
+        (funcall before-tramp-callback))
     (dss/term-setup-tramp)
     (if command
         (term-send-raw-string command))))
@@ -114,6 +126,13 @@
     (kill-region beg (point)))
   (term-send-raw-string (substring-no-properties (current-kill 0))))
 
+(defun dss/term-local-path (path)
+  (interactive)
+  (if (file-remote-p path)
+      (tramp-file-name-localname
+       (tramp-dissect-file-name path))
+    path))
+
 (defun dss/term-toggle-filename-rel-abs ()
   (interactive)
   (let* ((fn (with-no-warnings
@@ -126,8 +145,9 @@
          (replacement
           (if (file-name-absolute-p fn)
               (replace-regexp-in-string
-               default-directory "" fn nil t)
+               (dss/term-local-path default-directory) "" fn nil t)
             (expand-file-name fn)))
+         (replacement (dss/term-local-path replacement))
          (replacement
           (replace-regexp-in-string (getenv "HOME") "~" replacement nil t)))
     (dss/term-backward-kill-word)       ; must be at end
@@ -155,6 +175,7 @@
                             "path: "
                             ido-current-directory nil nil
                             initial))
+           (result (dss/term-local-path result))
            (short-result (replace-regexp-in-string
                           (getenv "HOME") "~" result nil t)))
       (when (not no-insert)
@@ -220,6 +241,41 @@
         (with-current-buffer term-buffer
           (term-send-raw-string (format "cd '%s'\n" dir)))
       (term-send-raw-string (format "cd '%s'\n" dir)))))
+
+(defun dss/term-eval-string (command-string &optional term-buffer)
+  (interactive)
+  (let* ((term-buffer (or term-buffer
+                          (if (eq major-mode 'term-mode)
+                              (current-buffer)
+                            (window-buffer (dss/term-get-current-window))))))
+    (if term-buffer
+        (with-current-buffer term-buffer
+          (term-send-raw-string
+           (format "%s\n" command-string
+                   ;; (dss/chomp command-string)
+                   ))))))
+
+(defun dss/term-eval-region (&optional beg end)
+  (interactive "r")
+  (dss/term-eval-string (buffer-substring beg end)))
+
+(defun dss/term-eval-buffer ()
+  (interactive)
+  (dss/term-eval-region (point-min) (point-max)))
+
+(defun dss/term-source-buffer ()
+  (interactive)
+  (dss/term-eval-string
+   (format "source '%s'" (expand-file-name (buffer-file-name)))))
+
+(defun dss/term-eval-region-or-para ()
+  (interactive)
+  (save-excursion
+    (when (not mark-active)
+      (mark-paragraph)
+      (setq mark-active nil)
+      (call-interactively 'dss/flash-region))
+    (call-interactively 'dss/term-eval-region)))
 
 (defun dss/term-backward-kill-word ()
   (interactive)
@@ -325,10 +381,18 @@ echo \"tramp initialized\"
         ("M-k" . term-send-raw-meta)
         ("M-y" . term-send-raw-meta)
         ("M-u" . term-send-raw-meta)
-        ("C-M-k" . term-send-raw-meta)
-        ("C-M-l" . term-send-raw-meta)
-        ("C-M-d" . term-send-raw-meta)
-        ("C-M-t" . term-send-raw-meta)
+        ("C-M-k" . (lambda ()
+                     (interactive)
+                     (term-send-raw-string "\e\C-k")))
+        ("C-M-l" . (lambda ()
+                     (interactive)
+                     (term-send-raw-string "\e\C-l")))
+        ("C-M-d" . (lambda ()
+                     (interactive)
+                     (term-send-raw-string "\e\C-d")))
+        ("C-M-t" . (lambda ()
+                     (interactive)
+                     (term-send-raw-string "\e\C-t")))
         ("M-h" . term-send-raw-meta)
         ("M-s" . term-send-raw-meta)
         ("M-t" . term-send-raw-meta)
