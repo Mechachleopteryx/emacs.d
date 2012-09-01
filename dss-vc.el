@@ -59,13 +59,17 @@
   (interactive)
   (let ((hitch-status
          (apply #'format
-                (cons "git hitch: %s - %s"
+                (cons "git hitch: '%s' - '%s'"
                       (mapcar
                        (lambda (var)
-                         (setenv var "")
+                         ;; (setenv var nil)
                          (let ((val (dss/local-shell-command-to-string
                                      (concat "echo -n $" var))))
-                           (setenv var val)
+                           (if (not (string-equal "" val))
+                               (setenv var val)
+                             (setq process-environment
+                                   (setenv-internal process-environment
+                                                    var nil nil)))
                            val))
                        '("GIT_AUTHOR_NAME" "GIT_AUTHOR_EMAIL"))))))
     (message hitch-status)
@@ -73,10 +77,13 @@
 
 (defun dss/magit-status-hook ()
   (interactive)
-  (save-excursion
-    (beginning-of-buffer)
-    (insert (dss/git-rehitch))
-    (insert "\n")))
+  )
+;; (defun dss/magit-status-hook ()
+;;   (interactive)
+;;   (save-excursion
+;;     (beginning-of-buffer)
+;;     (insert (dss/git-rehitch))
+;;     (insert "\n")))
 
 (add-hook 'magit-refresh-status-hook 'dss/magit-status-hook)
 
@@ -84,9 +91,12 @@
   (interactive)
   (if (magit-get-top-dir default-directory)
       (call-interactively 'magit-status)
-    (monky-status)))
+    (dvc-status)
+    ;; (monky-status)
+    ))
 
-(setq monky-process-type 'cmdserver)
+;; (setq monky-process-type 'cmdserver)
+(setq monky-process-type nil)
 ;(define-key monky-queue-mode-map)
 ;; (setq monky-hg-style-log-graph
 ;;       (monky-get-style-path "log-graph")
