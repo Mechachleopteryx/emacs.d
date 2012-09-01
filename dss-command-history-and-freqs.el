@@ -35,8 +35,6 @@
                                   recentf-list)
                           nil t))))
 
-
-(add-to-list 'load-path "/usr/share/emacs/site-lisp/session")
 (require 'session)
 (add-hook 'after-init-hook 'session-initialize)
 (setq session-save-file (concat dss-ephemeral-dir "session"))
