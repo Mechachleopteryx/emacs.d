@@ -510,9 +510,10 @@ tabbrowser.selectedTab = tabbrowser.mTabs[_lastTab._tPos-1];
     (message "%s: %s" query definition)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(add-to-list 'load-path "/usr/share/emacs/site-lisp/emacs-w3m")
-(setq w3m-icon-directory "/usr/share/emacs/etc/emacs-w3m")
-(require 'w3m-load)
+
+;; (add-to-list 'load-path "/usr/share/emacs/site-lisp/emacs-w3m")
+;; (setq w3m-icon-directory "/usr/share/emacs/etc/emacs-w3m")
+;; (require 'w3m-load)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
