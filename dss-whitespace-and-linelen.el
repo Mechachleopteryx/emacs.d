@@ -1,4 +1,4 @@
-(load-library "col-highlight") ; for highlighting the current col
+;(load-library "col-highlight") ; for highlighting the current col
 
 (setq require-final-newline t) ; auto-insert final newlines in all files
 
@@ -14,7 +14,7 @@
 (defun dss/show-ws ()
   (interactive)
   (setq show-trailing-whitespace t)
-  (show-ws-highlight-tabs)
+  (ws-highlight-tabs)
   ;; (hl-line-mode 1)
   )
 
