@@ -42,13 +42,5 @@
 (setq session-save-file (concat dss-ephemeral-dir "session"))
 (setq session-save-file-coding-system 'utf-8)
 
-;;; xahlee's lib
-(require 'command-frequency)
-(defun dss/command-freq-init ()
-  (setq-default command-frequency-table-file (concat dss-ephemeral-dir "frequencies"))
-  (command-frequency-table-load)
-  (command-frequency-mode 1)
-  (command-frequency-autosave-mode nil))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (provide 'dss-command-history-and-freqs)
