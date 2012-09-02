@@ -2,7 +2,7 @@
 (require 'evil)
 
 (define-key f7-map [(f7)] nil)
-(evil-set-toggle-key (kbd "<f7> <f7>"))
+;; (evil-set-toggle-key (kbd "<f7> <f7>"))
 (setq evil-default-state 'emacs)
 
 (evil-set-initial-state 'term-mode 'emacs)
@@ -11,17 +11,17 @@
 (evil-set-initial-state 'jabber-roster-mode 'emacs)
 
 (setq evil-normal-state-tag
-      (propertize (concat "N")
+      (propertize "N"
                   'face '(:foreground "#ff0000")))
 
 (setq evil-insert-state-tag
-      (propertize (concat "_I_")
+      (propertize "_I_"
                   'face '(:foreground "green")))
 (setq evil-motion-state-tag
-      (propertize (concat "-M-")
+      (propertize "-M-"
                   'face '(:foreground "cyan")))
 (setq evil-emacs-state-tag
-      (propertize (concat "*E*")
+      (propertize "*E*"
                   'face '(:foreground "green")))
 
 (evil-define-command dss/jk-to-normal-mode ()
